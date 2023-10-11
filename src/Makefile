@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -Werror
 BUILD=../build/prog
-LDFLAGS=
+LDFLAGS=-fopenmp
 
 all: build
 
