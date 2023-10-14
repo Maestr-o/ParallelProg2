@@ -16,13 +16,17 @@ void run_seq(long n, long x, long exp); // запуск последовател
 void run_par(long n, long x, long exp); // запуск параллельного вычисления
 
 int main(int argc, char *argv[]) {
-    #ifdef parallel
-    MPI_Init(&argc, &argv);
-    #endif
     long x; // количество чисел в комбинации
     long n; // максимальное значение числа
     long exp; // степень
-    
+
+    #ifdef parallel
+    int rank, size;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (rank == 0) {
+    #endif
     printf("Enter N: ");
     if (!scanf("%ld", &n)) {
         printf("Input error\n");
@@ -38,12 +42,13 @@ int main(int argc, char *argv[]) {
         printf("Input error\n");
         return 0;
     }
-    #ifdef seq
-    run_seq(n, x, exp);
-    #endif
     #ifdef parallel
+    }
     run_par(n, x, exp);
     MPI_Finalize();
+    #endif
+    #ifdef seq
+    run_seq(n, x, exp);
     #endif
     return 0;
 }
@@ -58,19 +63,7 @@ void run_seq(long n, long x, long exp) {
 }
 
 void run_par(long n, long x, long exp) {
-    int rank, size;
-    long result = 0;
-    double start, end;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Bcast(&n, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&x, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-    MPI_Bcast(&exp, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-
-    start = omp_get_wtime();
-    result = calc(n, x, exp);
-    end = omp_get_wtime();
-    printf("Parallel: time = %.3lf sec, result = %ld\n", (end - start), result);
+    
 }
 
 bool is_prime(long num) {
@@ -107,6 +100,10 @@ long** generate_combinations(long x, long n, long* num_combinations) {
     }
 
     long** result = (long**)malloc(max_combinations * sizeof(long*));
+    if (result == NULL) {
+        fprintf(stderr, "Error allocate memory\n");
+        exit(EXIT_FAILURE);
+    }
     for (i = 0; i < max_combinations; i++) {
         result[i] = (long*)malloc(x * sizeof(long));
     }
