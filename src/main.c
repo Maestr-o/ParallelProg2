@@ -4,10 +4,14 @@
 #include <math.h>
 #include <omp.h>
 
+bool is_prime(long num); // проверка на простоту
+void generate_combinations_util(int x, int n, int current, int* combination, int index,
+    long** result, int* num_combinations); // рекурсивная функция генерации комбинации простых чисел
+long** generate_combinations(int x, int n, int* num_combinations); // обертывает вызов рекурсивной функции
+void free_combinations(long** combinations, int num_combinations); // освобождает память
+long max(long *a, long sz); // поиск максимального значения
+long seq_calc(long n, long x, long exp); // последовательное вычисление
 void run();
-bool is_prime(unsigned long long int num); // проверка числа на простоту
-unsigned long long int* generate_primes(unsigned long long int n); // генерация массива простых чисел
-unsigned long long int seq_calc(unsigned long long int num_primes, unsigned long long int exp); // последовательно вычисление
 
 int main() {
     run();
@@ -15,55 +19,100 @@ int main() {
 }
 
 void run() {
-    unsigned long long int N, num_primes, exp, result = 0;
-    printf("Enter N: ");
-    scanf("%I64u", &N);
-    printf("Enter quantity of prime numbers: ");
-    scanf("%I64u", &num_primes);
-    printf("Enter exponent: ");
-    scanf("%I64u", &exp);
+    long x; // количество чисел в комбинации
+    long n; // максимальное значение числа
+    long exp; // степень
+    long result = 0;
 
+    printf("Enter N: ");
+    scanf("%ld", &n);
+    printf("Enter quantity of prime numbers: ");
+    scanf("%ld", &x);
+    printf("Enter exponent: ");
+    scanf("%ld", &exp);
+    
     double start, end; // последовательное вычисление
     start = omp_get_wtime();
-    result = seq_calc(num_primes, exp);
+    result = seq_calc(n, x, exp);
     end = omp_get_wtime();
-    printf("Seq: time = %.3lf sec, result = ", (end - start));
-    if (result < N)
-        printf("%I64u\n", result);
-    else
-        printf("No\n");
-
-    
+    printf("Seq: time = %.3lf sec, result = %ld", (end - start), result);
 }
 
-bool is_prime(unsigned long long int num) {
+bool is_prime(long num) {
     if (num < 2) return false;
-    for (unsigned long long int i = 2; i * i <= num; i++) {
+    for (long i = 2; i * 2 <= num; i++) {
         if (num % i == 0) return false;
     }
     return true;
 }
 
-unsigned long long int* generate_primes(unsigned long long int n) {
-    unsigned long long int* primes = malloc(n * sizeof(unsigned long long int));
-    unsigned long long int count = 0;
-    unsigned long long int current_num = 2;
-    while (count < n) {
-        if (is_prime(current_num)) {
-            primes[count] = current_num;
-            count++;
+void generate_combinations_util(int x, int n, int current, int* combination, int index, long** result, int* num_combinations) {
+    if (index == x) {
+        for (int i = 0; i < x; i++) {
+            result[*num_combinations][i] = combination[i];
         }
-        current_num++;
+        (*num_combinations)++;
+        return;
     }
-    return primes;
+
+    for (int i = current; i <= n; i++) {
+        if (is_prime(i)) {
+            combination[index] = i;
+            generate_combinations_util(x, n, i, combination, index + 1, result, num_combinations);
+        }
+    }
 }
 
-unsigned long long int seq_calc(unsigned long long int num_primes, unsigned long long int exp) {
-    unsigned long long int result;
-    unsigned long long int *primes = generate_primes(num_primes);
-    for (unsigned long long int i = 0; i < num_primes; i++) {
-        result += pow(primes[i], exp);
+long** generate_combinations(int x, int n, int* num_combinations) {
+    *num_combinations = 0;
+    int max_combinations = 1;
+    for (int i = 0; i < x; i++) {
+        max_combinations *= (n - 1);
     }
-    free(primes);
+
+    long** result = (long**)malloc(max_combinations * sizeof(long*));
+    for (int i = 0; i < max_combinations; i++) {
+        result[i] = (long*)malloc(x * sizeof(long));
+    }
+
+    int* combination = (int*)malloc(x * sizeof(int));
+    generate_combinations_util(x, n, 2, combination, 0, result, num_combinations);
+    free(combination);
+
     return result;
+}
+
+void free_combinations(long** combinations, int num_combinations) {
+    for (int i = 0; i < num_combinations; i++) {
+        free(combinations[i]);
+    }
+    free(combinations);
+}
+
+long max(long *a, long sz) {
+    long i = 1, m = a[0];
+    while (i < sz) {
+        if (a[i] > m)
+            m = a[i];
+        i++;
+    }
+    free(a);
+    return m;
+}
+
+long seq_calc(long n, long x, long exp) {
+    int num_combinations, ans;
+    long** combinations = generate_combinations(x, n, &num_combinations);
+    long* results = calloc(sizeof(long), num_combinations);
+    for (int i = 0; i < num_combinations; i++) {
+        for (unsigned int j = 0; j <= sizeof(combinations[i]) / sizeof(long); j++) {
+            results[i] += pow(combinations[i][j], exp);
+        }
+        if (results[i] >= n)
+            results[i] = 0;
+    }
+    ans = max(results, num_combinations);
+    free_combinations(combinations, num_combinations);
+    free(results);
+    return ans;
 }
