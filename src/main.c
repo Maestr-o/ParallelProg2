@@ -11,7 +11,7 @@ bool is_prime(long num); // проверка на простоту
 void generate_combinations_util(long x, long n, long current, long *combination, long index,
                                 long **result, long *num_combinations);             // рекурсивная функция генерации комбинации простых чисел
 long **generate_combinations(long x, long start, long end, long *num_combinations); // обертка для рекурсивной функции генерации
-void free_combinations(long **combinations, long num_combinations);                 // освобождает память
+void free_combinations(long **combinations, long num_combinations);                 // освобождение памяти
 long max(long *a, long sz);                                                         // поиск максимального значения
 void run_seq(long n, long x, long exp);                                             // запуск последовательного вычисления
 void run_par(long n, long x, long exp);                                             // запуск параллельного вычисления
@@ -123,15 +123,13 @@ bool is_prime(long num)
 
 long **generate_combinations(long x, long start, long end, long *num_combinations)
 {
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     *num_combinations = 0;
     long max_combinations = 1, i;
     for (i = 0; i < x; i++)
         max_combinations *= (end - start - 1);
 
     long **result = (long **)malloc(max_combinations * sizeof(long *));
-    if (rank == 0 && result == NULL)
+    if (result == NULL)
     {
         fprintf(stderr, "Error allocate memory\n");
         exit(EXIT_FAILURE);
